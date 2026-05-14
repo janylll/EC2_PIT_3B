@@ -2,8 +2,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { User, Phone, Droplet, Calendar, MapPin, Edit } from "lucide-react";
+import { User, Phone, Droplet, Calendar, MapPin, Edit, LogOut } from "lucide-react";
 import { Separator } from "../../components/ui/separator";
+import { supabase } from "../../lib/supabase"; // Supabase connection
 
 export function PatientProfile() {
   const patientData = {
@@ -25,6 +26,10 @@ export function PatientProfile() {
       relationship: "Spouse",
       phone: "+63 912 345 6780",
     },
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
@@ -166,6 +171,16 @@ export function PatientProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Logout Button */}
+      <Button 
+        onClick={handleLogout} 
+        variant="destructive" 
+        className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white shadow-md"
+      >
+        <LogOut className="w-4 h-4 mr-2" />
+        Log Out
+      </Button>
     </div>
   );
 }
