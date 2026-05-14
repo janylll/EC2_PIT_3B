@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { Activity } from "lucide-react";
-import type { Session } from "@supabase/supabase-js"; // Fixed: Added 'type' keyword
+import type { Session } from "@supabase/supabase-js"; 
 
 // Import your pages
 import { Home } from "./pages/Home/Home";
@@ -9,18 +9,18 @@ import { MyAppointments } from "./pages/Appointments/Appointments";
 import { AIHelp } from "./pages/AiHelp/AiHelp";
 import { PatientProfile } from "./components/profile/PatientProfile";
 import { Auth } from "./pages/Auth/Auth";
+import { Profile } from "./pages/Profile/Profile";
 
 // Import UI components
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
-import { Sheet, SheetContent } from "./components/ui/sheet";
 import { supabase } from "./lib/supabase";
 
-// 1. The Layout Component (Contains your navigation bar)
+// 1. The Layout Component
 function Layout() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-Linear-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 bg-white border-b border-blue-100 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,16 +33,29 @@ function Layout() {
               <span className="text-xl font-semibold text-blue-900">CDO MedGuide</span>
             </div>
 
-            {/* User Avatar */}
-            <button
-              onClick={() => setProfileOpen(true)}
-              className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+            {/* FIXED: Hover-Based User Avatar & Dropdown Menu */}
+            <div 
+              className="relative"
+              onMouseEnter={() => setProfileOpen(true)}
+              onMouseLeave={() => setProfileOpen(false)}
             >
-              <Avatar className="h-10 w-10 cursor-pointer border-2 border-blue-200 hover:border-blue-400 transition-colors">
-                <AvatarImage src="" alt="Patient" />
-                <AvatarFallback className="bg-blue-100 text-blue-700">JD</AvatarFallback>
-              </Avatar>
-            </button>
+              <button className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full cursor-default">
+                <Avatar className="h-10 w-10 border-2 border-blue-200 hover:border-blue-400 transition-colors">
+                  <AvatarImage src="" alt="Patient" />
+                  <AvatarFallback className="bg-blue-100 text-blue-700">Me</AvatarFallback>
+                </Avatar>
+              </button>
+
+              {/* Dropdown Box with an invisible padding bridge (pt-2) so hover doesn't break */}
+              {profileOpen && (
+                <div className="absolute right-0 top-full pt-2 w-64 z-50">
+                  <div className="bg-white rounded-xl shadow-2xl border border-blue-100 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <PatientProfile onClose={() => setProfileOpen(false)} />
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -71,33 +84,35 @@ function Layout() {
             <Route path="/" element={<Home />} />
             <Route path="/appointments" element={<MyAppointments />} />
             <Route path="/ai-help" element={<AIHelp />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </div>
       </main>
-
-      {/* Patient Profile Slide-out */}
-      <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          <PatientProfile />
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
 
-// 2. The Main App Component (Checks Auth before showing Layout)
+// 2. The Main App Component 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if they are already logged in when the app loads
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const verifyUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
 
-    // Listen for login/logout events
+      if (error || !user) {
+        await supabase.auth.signOut();
+        setSession(null);
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+      }
+      setLoading(false);
+    };
+
+    verifyUser();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -111,12 +126,10 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center bg-blue-50">Loading...</div>;
   }
 
-  // Force users to log in if they have no session
   if (!session) {
     return <Auth />;
   }
 
-  // Show the main MedGuide dashboard if they are logged in
   return (
     <BrowserRouter>
       <Layout />
