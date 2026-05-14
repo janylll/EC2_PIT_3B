@@ -18,8 +18,33 @@ export function HospitalDashboard() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
+    // 1. Fetch the initial data when the page loads
     fetchHospitalData();
-  }, []);
+
+    // 2. THE REAL-TIME MAGIC 🪄
+    // Subscribe to any changes happening in the 'appointments' table
+    const subscription = supabase
+      .channel('appointments_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, and DELETE events
+          schema: 'public',
+          table: 'appointments',
+        },
+        (payload) => {
+          console.log('Real-time change detected!', payload);
+          // Whenever a change happens, instantly re-fetch the fresh data!
+          fetchHospitalData(); 
+        }
+      )
+      .subscribe();
+
+    // 3. Cleanup the listener when the hospital logs out or leaves the page
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []); // Note: We leave the dependency array empty so it only sets up the listener once
 
   const fetchHospitalData = async () => {
     try {

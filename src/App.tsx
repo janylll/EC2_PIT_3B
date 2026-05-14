@@ -26,7 +26,7 @@ function Layout() {
           <div className="flex flex-wrap items-center justify-between min-h-16 md:min-h-20 py-2 md:py-0 gap-y-3">
             
             <div className="flex items-center gap-3 shrink-0 w-1/2 md:w-auto md:flex-1 order-1">
-              <img src="/logo.png" alt="CDO MedGuide Logo" className="w-10 h-10 object-contain" />
+              <img src="/icon.png" alt="CDO MedGuide Logo" className="w-10 h-10 object-contain" />
               <span className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">CDO MedGuide</span>
             </div>
 
