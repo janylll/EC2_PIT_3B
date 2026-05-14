@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Calendar, Clock, MapPin, Plus, Loader2, FileText, AlertCircle, Trash2, Edit2, CheckCircle2, Map } from "lucide-react";
+import { Calendar, Clock, MapPin, Plus, Loader2, FileText, AlertCircle, Trash2, Edit2, CheckCircle2, Map, History, XCircle } from "lucide-react";
 
 const CDO_HOSPITALS = [
   "Northern Mindanao Medical Center (NMMC)",
@@ -13,17 +13,17 @@ const CDO_HOSPITALS = [
   "Maria Reyna Xavier University Hospital"
 ];
 
-// Helper function to generate Google Maps embed URL based on hospital name
 const getMapUrl = (hospitalName: string) => {
   const query = encodeURIComponent(`${hospitalName} Cagayan de Oro City`);
-  return `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  return `https://maps.google.com/maps?q=$${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
 };
 
 export function MyAppointments() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Map Panel State
+  // Tab State
+  const [activeTab, setActiveTab] = useState<"active" | "history">("active");
   const [expandedMapId, setExpandedMapId] = useState<number | null>(null);
 
   // Modal State
@@ -87,7 +87,6 @@ export function MyAppointments() {
 
   const deleteAppointment = async (id: number) => {
     if (!window.confirm("Are you sure you want to cancel and delete this appointment request?")) return;
-    
     try {
       const { error } = await supabase.from("appointments").delete().eq("id", id);
       if (error) throw error;
@@ -106,14 +105,13 @@ export function MyAppointments() {
       if (!user) throw new Error("Not logged in");
 
       const combinedSymptoms = `Feels: ${primarySymptom} | Duration: ${symptomDuration}`;
-
       const appointmentData = {
         user_id: user.id,
         hospital: hospital,
         appointment_date: date,
         appointment_time: time,
         symptoms: combinedSymptoms,
-        status: "Pending" // Explicitly set to Pending for new/edited
+        status: "Pending" 
       };
 
       if (editId) {
@@ -128,9 +126,35 @@ export function MyAppointments() {
       loadAppointments();
     } catch (error) {
       console.error("Error saving appointment:", error);
-      alert("Failed to save appointment. Please try again.");
+      alert("Failed to save appointment.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Filter the lists
+  const activeApps = appointments.filter(a => a.status === "Pending" || a.status === "Approved");
+  const historyApps = appointments.filter(a => a.status === "Completed" || a.status === "Declined");
+  const currentList = activeTab === "active" ? activeApps : historyApps;
+
+  // Helper for dynamic colors
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case "Approved": return "bg-green-500";
+      case "Pending": return "bg-yellow-400";
+      case "Completed": return "bg-blue-500";
+      case "Declined": return "bg-red-500";
+      default: return "bg-gray-400";
+    }
+  };
+
+  const getBadgeStyle = (status: string) => {
+    switch(status) {
+      case "Approved": return "bg-green-100 text-green-700";
+      case "Pending": return "bg-yellow-100 text-yellow-700";
+      case "Completed": return "bg-blue-100 text-blue-700";
+      case "Declined": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -150,18 +174,34 @@ export function MyAppointments() {
         </Button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-gray-200 pb-px">
+        <button 
+          onClick={() => setActiveTab("active")}
+          className={`pb-3 px-2 text-lg font-bold transition-colors border-b-4 flex items-center gap-2 ${activeTab === "active" ? "border-green-600 text-green-800" : "border-transparent text-gray-400 hover:text-gray-600"}`}
+        >
+          Active Requests <span className="bg-gray-100 text-gray-800 py-0.5 px-2 rounded-full text-sm">{activeApps.length}</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab("history")}
+          className={`pb-3 px-2 text-lg font-bold transition-colors border-b-4 flex items-center gap-2 ${activeTab === "history" ? "border-blue-600 text-blue-800" : "border-transparent text-gray-400 hover:text-gray-600"}`}
+        >
+          <History className="w-5 h-5" /> History <span className="bg-gray-100 text-gray-800 py-0.5 px-2 rounded-full text-sm">{historyApps.length}</span>
+        </button>
+      </div>
+
       {/* Appointments List */}
-      {appointments.length === 0 ? (
+      {currentList.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
           <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-900">No appointments yet</h3>
-          <p className="text-gray-500 mt-1">Click the button above to request a hospital visit.</p>
+          <h3 className="text-lg font-medium text-gray-900">No {activeTab} appointments</h3>
+          {activeTab === "active" && <p className="text-gray-500 mt-1">Click the button above to request a hospital visit.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {appointments.map((app) => (
-            <Card key={app.id} className="overflow-hidden hover:shadow-md transition-shadow border-gray-200 flex flex-col">
-              <div className={`h-2 w-full ${app.status === 'Approved' ? 'bg-green-500' : 'bg-yellow-400'}`} />
+          {currentList.map((app) => (
+            <Card key={app.id} className={`overflow-hidden hover:shadow-md transition-shadow border-gray-200 flex flex-col ${app.status === 'Declined' || app.status === 'Completed' ? 'opacity-80 bg-gray-50' : ''}`}>
+              <div className={`h-2 w-full ${getStatusColor(app.status)}`} />
               <CardContent className="p-5 flex-1 flex flex-col">
                 
                 <div className="flex justify-between items-start mb-4">
@@ -170,15 +210,13 @@ export function MyAppointments() {
                     <h3 className="font-bold text-gray-900 leading-tight">{app.hospital}</h3>
                   </div>
                   
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 ${
-                    app.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {app.status === 'Approved' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                    {app.status || "Pending"}
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 ${getBadgeStyle(app.status)}`}>
+                    {app.status === 'Approved' || app.status === 'Completed' ? <CheckCircle2 className="w-3 h-3" /> : app.status === 'Declined' ? <XCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                    {app.status}
                   </span>
                 </div>
 
-                <div className="space-y-3 mb-5 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div className="space-y-3 mb-5 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar className="w-4 h-4 mr-3 text-green-600" /> {app.appointment_date}
                   </div>
@@ -191,32 +229,46 @@ export function MyAppointments() {
                   </div>
                 </div>
 
+                {/* Status-specific feedback blocks */}
                 {app.status === 'Approved' && (
                   <div className="mb-5 p-3 bg-green-50 border border-green-100 rounded-lg text-sm">
                     <p><span className="font-semibold text-green-800">Assigned Doctor:</span> {app.assigned_doctor || "TBD"}</p>
                     <p><span className="font-semibold text-green-800">Room / Dept:</span> {app.assigned_room || "TBD"}</p>
                   </div>
                 )}
+                {app.status === 'Declined' && (
+                  <div className="mb-5 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-800 text-center font-medium">
+                    The hospital was unable to approve this request.
+                  </div>
+                )}
+                {app.status === 'Completed' && (
+                  <div className="mb-5 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800 text-center font-medium">
+                    This appointment was successfully completed.
+                  </div>
+                )}
 
                 {/* Card Actions (Bottom Area) */}
                 <div className="mt-auto pt-4 border-t border-gray-100 space-y-3">
                   
-                  {/* EXPAND MAP BUTTON */}
-                  <Button 
-                    variant="secondary" 
-                    className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    onClick={() => setExpandedMapId(expandedMapId === app.id ? null : app.id)}
-                  >
-                    <Map className="w-4 h-4 mr-2" /> {expandedMapId === app.id ? "Hide Route & Map" : "View Route & Details"}
-                  </Button>
+                  {/* EXPAND MAP BUTTON - Only show if not declined */}
+                  {app.status !== 'Declined' && (
+                    <Button 
+                      type="button"
+                      variant="secondary" 
+                      className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      onClick={() => setExpandedMapId(expandedMapId === app.id ? null : app.id)}
+                    >
+                      <Map className="w-4 h-4 mr-2" /> {expandedMapId === app.id ? "Hide Route & Map" : "View Route & Details"}
+                    </Button>
+                  )}
 
                   {/* Edit & Delete Actions (Only if pending) */}
-                  {app.status !== 'Approved' && (
+                  {app.status === 'Pending' && (
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 text-gray-600" onClick={() => openEditAppointment(app)}>
+                      <Button type="button" variant="outline" size="sm" className="flex-1 text-gray-600" onClick={() => openEditAppointment(app)}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => deleteAppointment(app.id)}>
+                      <Button type="button" variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => deleteAppointment(app.id)}>
                         <Trash2 className="w-4 h-4 mr-2" /> Cancel
                       </Button>
                     </div>
@@ -254,12 +306,12 @@ export function MyAppointments() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">{editId ? "Edit Request" : "Setup Appointment"}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">×</button>
             </div>
             
             <form onSubmit={saveAppointment} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Select CDO Hospital / Clinic</label>
+                <label className="text-sm font-semibold text-gray-700 mb-1">Select CDO Hospital / Clinic</label>
                 <select 
                   value={hospital} 
                   onChange={(e) => setHospital(e.target.value)}
@@ -272,11 +324,11 @@ export function MyAppointments() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Preferred Date</label>
+                  <label className="text-sm font-semibold text-gray-700 mb-1">Preferred Date</label>
                   <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="h-12" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Preferred Time</label>
+                  <label className="text-sm font-semibold text-gray-700 mb-1">Preferred Time</label>
                   <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} required className="h-12" />
                 </div>
               </div>
@@ -287,7 +339,7 @@ export function MyAppointments() {
                 </h3>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">1. What symptoms are you feeling today?</label>
+                  <label className="text-sm font-medium text-gray-700 mb-1">1. What symptoms are you feeling today?</label>
                   <Input 
                     type="text" 
                     placeholder="e.g. Severe headache, fever, stomach pain..." 
@@ -299,7 +351,7 @@ export function MyAppointments() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">2. How long have you felt this way?</label>
+                  <label className="text-sm font-medium text-gray-700 mb-1">2. How long have you felt this way?</label>
                   <Input 
                     type="text" 
                     placeholder="e.g. Since yesterday, for 3 days..." 
@@ -322,7 +374,6 @@ export function MyAppointments() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
