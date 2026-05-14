@@ -1,174 +1,161 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
+import { Card, CardContent} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
-import { Calendar, Clock, MapPin, User, ChevronDown, ChevronUp } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
+import { Calendar, Clock, Plus, Loader2, Map } from "lucide-react";
+import { MapEmbed } from "../../components/map/MapEmbed";
 
-const appointments = [
-  {
-    id: 1,
-    date: "May 15, 2026",
-    time: "10:00 AM",
-    doctor: "Dr. Maria Santos",
-    specialty: "Cardiologist",
-    hospital: "Northern Mindanao Medical Center (NMMC)",
-    address: "J.R. Borja St, Cagayan de Oro",
-    status: "Upcoming",
-    location: { lat: 8.4542, lng: 124.6319 },
-  },
-  {
-    id: 2,
-    date: "May 20, 2026",
-    time: "2:30 PM",
-    doctor: "Dr. Roberto Cruz",
-    specialty: "General Practitioner",
-    hospital: "Maria Reyna Xavier University Hospital",
-    address: "Corrales Ave, Cagayan de Oro",
-    status: "Upcoming",
-    location: { lat: 8.4833, lng: 124.6472 },
-  },
-  {
-    id: 3,
-    date: "May 28, 2026",
-    time: "9:00 AM",
-    doctor: "Dr. Linda Reyes",
-    specialty: "Dermatologist",
-    hospital: "CDO Medical Center",
-    address: "Yacal-Gomez St, Cagayan de Oro",
-    status: "Upcoming",
-    location: { lat: 8.4822, lng: 124.6511 },
-  },
-];
+interface Appointment {
+  id: number;
+  doctor: string;
+  specialty: string;
+  hospital: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+}
 
 export function MyAppointments() {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null); // Tracks which map is open
 
-  const toggleAppointment = (id: number) => {
-    setExpandedId(expandedId === id ? null : id);
+  // Form States
+  const [doctorName, setDoctorName] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [hospital, setHospital] = useState("Northern Mindanao Medical Center");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase.from("appointments").select("*").eq("user_id", user.id).order("appointment_date", { ascending: true });
+      if (error) throw error;
+      setAppointments(data || []);
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user logged in");
+
+      const { error } = await supabase.from("appointments").insert([{
+          user_id: user.id, doctor: doctorName, specialty, hospital, appointment_date: date, appointment_time: time, status: "Upcoming",
+      }]);
+      if (error) throw error;
+
+      fetchAppointments();
+      setIsDialogOpen(false);
+      setDoctorName(""); setSpecialty(""); setDate(""); setTime("");
+    } catch (error) {
+      console.error("Error saving appointment:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await supabase.from("appointments").delete().eq("id", id);
+      setAppointments(appointments.filter(a => a.id !== id));
+    } catch (error) {
+      console.error("Error deleting appointment:", error);
+    }
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">My Appointments</h1>
-        <p className="text-gray-600">Manage and view your upcoming medical appointments</p>
+    <div className="space-y-8 max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">My Appointments</h1>
+          <p className="text-gray-600">Schedule and manage your healthcare visits in CDO.</p>
+        </div>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+              <Plus className="w-4 h-4 mr-2" /> Book Visit
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-106.25">
+            <DialogHeader><DialogTitle className="text-xl text-blue-900">Schedule New Appointment</DialogTitle></DialogHeader>
+            <form onSubmit={handleAddAppointment} className="space-y-4 mt-4">
+              <div><label className="text-sm font-medium text-gray-700">Doctor Name</label><Input required value={doctorName} onChange={(e) => setDoctorName(e.target.value)} className="mt-1" /></div>
+              <div><label className="text-sm font-medium text-gray-700">Specialty</label><Input required value={specialty} onChange={(e) => setSpecialty(e.target.value)} className="mt-1" /></div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Hospital</label>
+                <select className="flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm mt-1" value={hospital} onChange={(e) => setHospital(e.target.value)}>
+                  <option>Northern Mindanao Medical Center</option><option>J.R. Borja General Hospital</option><option>Capitol University Medical City</option><option>Maria Reyna Xavier University Hospital</option><option>Polymedic Medical Plaza</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="text-sm font-medium text-gray-700">Date</label><Input required type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1" /></div>
+                <div><label className="text-sm font-medium text-gray-700">Time</label><Input required type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-1" /></div>
+              </div>
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4" disabled={submitting}>
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Confirm Appointment"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Appointments List */}
       <div className="space-y-4">
-        {appointments.map((appointment, index) => (
-          <div key={appointment.id} className="relative">
-            {/* Timeline Line */}
-            {index !== appointments.length - 1 && (
-              <div className="absolute left-6 top-20 w-0.5 h-full bg-blue-200 z-0" />
-            )}
-
-            <Card className="border-blue-100 shadow-md hover:shadow-lg transition-all relative z-10">
-              {/* Clickable Header */}
-              <CardHeader
-                className="pb-4 cursor-pointer hover:bg-blue-50/50 transition-colors"
-                onClick={() => toggleAppointment(appointment.id)}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Timeline Dot */}
-                  <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg shrink-0">
-                    <Calendar className="w-6 h-6" />
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="text-xl text-blue-900">{appointment.hospital}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                          {appointment.status}
-                        </Badge>
-                        {expandedId === appointment.id ? (
-                          <ChevronUp className="w-5 h-5 text-gray-500" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-500" />
-                        )}
-                      </div>
+        {loading ? (
+          <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+        ) : appointments.length === 0 ? (
+          <div className="text-center p-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500">You have no upcoming appointments.</p>
+          </div>
+        ) : (
+          appointments.map((apt) => (
+            <Card key={apt.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500 overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-lg text-gray-900">{apt.doctor}</h3>
+                      <Badge className="bg-blue-100 text-blue-700">{apt.status}</Badge>
                     </div>
-                    <CardDescription className="space-y-2">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Calendar className="w-4 h-4 text-blue-500" />
-                        <span className="font-medium">{appointment.date}</span>
-                        <Clock className="w-4 h-4 ml-4 text-blue-500" />
-                        <span className="font-medium">{appointment.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <User className="w-4 h-4 text-blue-500" />
-                        <span>
-                          {appointment.doctor} - {appointment.specialty}
-                        </span>
-                      </div>
-                    </CardDescription>
+                    <p className="text-blue-600 font-medium text-sm">{apt.specialty}</p>
+                    <div className="flex gap-4 mt-3 text-sm text-gray-600">
+                      <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{apt.appointment_date}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{apt.appointment_time}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setExpandedId(expandedId === apt.id ? null : apt.id)} className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-none">
+                      <Map className="w-4 h-4 mr-2" /> {expandedId === apt.id ? "Hide Route" : "View Route"}
+                    </Button>
+                    <Button variant="destructive" onClick={() => handleDelete(apt.id)}>Cancel</Button>
                   </div>
                 </div>
-              </CardHeader>
-
-              {/* Expandable Content */}
-              {expandedId === appointment.id && (
-                <CardContent className="pt-0 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="ml-16 space-y-4">
-                    {/* Full Address */}
-                    <div className="flex items-start gap-2 text-gray-600 bg-blue-50 p-3 rounded-lg">
-                      <MapPin className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-medium text-gray-700">Location</p>
-                        <p className="text-sm">{appointment.address}</p>
-                      </div>
-                    </div>
-
-                    {/* Google Maps Placeholder */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-700 mb-3">Location Map</h3>
-                      <div className="w-full h-64 bg-gray-100 rounded-lg border-2 border-blue-200 relative overflow-hidden">
-                        {/* Map Placeholder */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center space-y-2">
-                            <MapPin className="w-12 h-12 text-blue-500 mx-auto" />
-                            <p className="text-gray-600 font-medium">Google Maps Integration</p>
-                            <p className="text-sm text-gray-500">{appointment.hospital}</p>
-                            <p className="text-xs text-gray-400">
-                              Lat: {appointment.location.lat}, Lng: {appointment.location.lng}
-                            </p>
-                          </div>
-                        </div>
-                        {/* Decorative map-like pattern */}
-                        <div className="absolute inset-0 opacity-10">
-                          <div className="grid grid-cols-8 h-full">
-                            {Array.from({ length: 64 }).map((_, i) => (
-                              <div key={i} className="border border-gray-300" />
-                            ))}
-                          </div>
-                        </div>
-                        {/* Pin marker */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full">
-                          <div className="w-8 h-8 bg-red-500 rounded-full border-4 border-white shadow-lg" />
-                          <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-red-500 -mt-1 mx-auto" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              )}
+                {/* EXPANDABLE MAP SECTION */}
+                {expandedId === apt.id && <MapEmbed hospital={apt.hospital} />}
+              </CardContent>
             </Card>
-          </div>
-        ))}
+          ))
+        )}
       </div>
-
-      {/* Empty State */}
-      {appointments.length === 0 && (
-        <Card className="border-dashed border-2 border-gray-300">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Calendar className="w-16 h-16 text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">No Appointments Yet</h3>
-            <p className="text-gray-500 text-center max-w-md">
-              You don't have any upcoming appointments. Use the AI Help to schedule your first appointment.
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

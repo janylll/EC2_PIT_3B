@@ -1,17 +1,22 @@
 import { useState } from "react";
-import { supabase } from "../../lib/supabase"; // Your Supabase connection
+import { supabase } from "../../lib/supabase";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Activity, Mail, Lock, Loader2 } from "lucide-react";
+import { Activity, Mail, Lock, Loader2, User, Phone, Calendar } from "lucide-react";
 
 export function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Form States
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [dob, setDob] = useState("");
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,13 +33,21 @@ export function Auth() {
         });
         if (error) throw error;
       } else {
-        // Handle Sign Up
+        // Handle Sign Up & Save Profile Data
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              full_name: fullName,
+              phone: phone,
+              dob: dob,
+            }
+          }
         });
         if (error) throw error;
-        setSuccessMsg("Check your email to verify your account!");
+        setSuccessMsg("Account created! You can now sign in.");
+        setIsLogin(true); // Switch them to login view
       }
     } catch (error: any) {
       setErrorMsg(error.message || "An error occurred during authentication.");
@@ -70,49 +83,43 @@ export function Auth() {
           )}
 
           <form onSubmit={handleAuth} className="space-y-4">
+            
+            {/* EXTRA FIELDS FOR SIGN UP ONLY */}
+            {!isLogin && (
+              <>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input type="text" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="pl-10" required />
+                </div>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input type="tel" placeholder="Contact Number (e.g. 09123456789)" value={phone} onChange={(e) => setPhone(e.target.value)} className="pl-10" required />
+                </div>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="pl-10 text-gray-500" required />
+                </div>
+              </>
+            )}
+
+            {/* EMAIL AND PASSWORD (ALWAYS VISIBLE) */}
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <Input
-                type="email"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-                required
-              />
+              <Input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required />
             </div>
             
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
-                required
-                minLength={6}
-              />
+              <Input type="password" placeholder="Password (Min 6 characters)" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10" required minLength={6} />
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? "Sign In" : "Create Account")}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setErrorMsg("");
-                setSuccessMsg("");
-              }}
-              className="text-sm text-blue-600 hover:underline focus:outline-none"
-            >
+            <button type="button" onClick={() => { setIsLogin(!isLogin); setErrorMsg(""); setSuccessMsg(""); }} className="text-sm text-blue-600 hover:underline focus:outline-none">
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
           </div>
