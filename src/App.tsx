@@ -10,6 +10,7 @@ import { AIHelp } from "./pages/AiHelp/AiHelp";
 import { Auth } from "./pages/Auth/Auth";
 import { Profile } from "./pages/Profile/Profile";
 import { HospitalDashboard } from "./pages/HospitalDashboard/HospitalDashboard";
+import { LandingPage } from "./pages/LandingPage/LandingPage"; // Import your new landing page component
 
 // Import the separated Layout UI
 import { Layout } from "./components/layout/Layout";
@@ -18,6 +19,9 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<string>("patient");
   const [loading, setLoading] = useState(true);
+  
+  // Controls if unauthenticated users see the Landing Page or the Auth Portal
+  const [showAuthForm, setShowAuthForm] = useState(false);
 
   useEffect(() => {
     const verifyUser = async () => {
@@ -64,8 +68,26 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
   }
 
+  // TRAFFIC CONTROLLER FOR UNAUTHENTICATED GUESTS
   if (!session) {
-    return <Auth />;
+    // Show the login portal if they clicked an app-launch or call-to-action button
+    if (showAuthForm) {
+      return (
+        <div className="relative min-h-screen bg-gray-50">
+          {/* Back button to return to the landing overview */}
+          <button 
+            onClick={() => setShowAuthForm(false)}
+            className="absolute top-4 left-4 z-50 bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 font-semibold px-4 py-2 text-xs rounded-xl shadow-xs transition-all"
+          >
+            ← Back to Information Page
+          </button>
+          <Auth />
+        </div>
+      );
+    }
+    
+    // Default fallback view shows the new public marketing landing ecosystem
+    return <LandingPage onLaunchApp={() => setShowAuthForm(true)} />;
   }
 
   // TRAFFIC CONTROLLER: Redirect Hospitals directly to their dashboard
