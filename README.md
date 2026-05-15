@@ -46,9 +46,9 @@ npm install
 Create a `.env` file in the root directory of the project (next to `package.json`) and add your API keys:
 
 ```env
-VITE_GEMINI_API_KEY=AIzaSyDm4ek9ImQM8jwIPg60XMdBXhUKat6Wgy8
-VITE_SUPABASE_URL=[https://eqsgjxdkishgojnjeupc.supabase.co](https://eqsgjxdkishgojnjeupc.supabase.co)
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxc2dqeGRraXNoZ29qbmpldXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2OTYzMDcsImV4cCI6MjA5NDI3MjMwN30.fF-rJlMWi7K35l4hyVqftnCvhVLXjsgOOIHSJO6f-zI
+VITE_GEMINI_API_KEY=your_gemini_api_key_here
+VITE_SUPABASE_URL=your_supabase_url_here
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
 ### 4. Database Setup (Supabase)
