@@ -19,12 +19,12 @@ export async function getTriageRecommendation(
   
   Your job is to assist patients with health inquiries AND help them book appointments.
 
-  CDO Hospitals available:
+CDO Hospitals available:
   - Northern Mindanao Medical Center (NMMC)
-  - J.R. Borja General Hospital
-  - Polymedic Medical Plaza
-  - Capitol University Medical Center
   - Maria Reyna Xavier University Hospital
+  - Capitol University Medical City
+  - Polymedic Medical Plaza
+  - J.R. Borja Memorial Hospital
 
   BOOKING PROTOCOL (CRITICAL):
   If the user wants to book an appointment, collect these 4 things ONE BY ONE:

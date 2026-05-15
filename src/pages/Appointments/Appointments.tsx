@@ -7,10 +7,10 @@ import { Calendar, Clock, MapPin, Plus, Loader2, FileText, AlertCircle, Trash2, 
 
 const CDO_HOSPITALS = [
   "Northern Mindanao Medical Center (NMMC)",
-  "J.R. Borja General Hospital",
+  "Maria Reyna Xavier University Hospital",
+  "Capitol University Medical City",
   "Polymedic Medical Plaza",
-  "Capitol University Medical Center",
-  "Maria Reyna Xavier University Hospital"
+  "J.R. Borja Memorial Hospital"
 ];
 
 const getMapUrl = (hospitalName: string) => {
