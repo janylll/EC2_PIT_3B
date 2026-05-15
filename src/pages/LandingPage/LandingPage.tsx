@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button";
 import { 
   MapPin, Phone, ShieldCheck, Activity, Users, ArrowRight, HeartPulse, 
-  Calendar, BrainCircuit, Building2, Smartphone, MessageSquare, ChevronDown, 
+  Calendar, BrainCircuit, Building2, Smartphone, ChevronDown, 
   Star, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, HelpCircle
 } from "lucide-react";
 
